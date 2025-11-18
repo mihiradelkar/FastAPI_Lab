@@ -1,8 +1,12 @@
-name: Periodic Model Calibration
+name: Train Iris and Wine Models
 
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
-    - cron: "0 0 * * *" #minutes, hours, day, month, day of week
+    - cron: "0 0 * * *" # Daily at midnight
 
 jobs:
   retrain:
@@ -10,10 +14,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.9
 
@@ -22,74 +26,34 @@ jobs:
 
       - name: Create directories
         run: |
-          mkdir -p models
+          mkdir -p model
           mkdir -p metrics
 
-      - name: Generate and Store Timestamp
-        run: |
-          timestamp=$(date '+%Y%m%d%H%M%S')
-          echo "$timestamp" > timestamp.txt
+      - name: Generate Timestamp
         id: timestamp
+        run: echo "timestamp=$(date '+%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
 
-      - name: Check File Permissions for iris
+      - name: Train Models
         run: |
-          ls -l ./src/train_iris.py
-          ls -l ./src/train_wine.py
+          cd src
+          python train_iris.py --timestamp ${{ steps.timestamp.outputs.timestamp }}
+          python train_wine.py --timestamp ${{ steps.timestamp.outputs.timestamp }}
 
-      - name: Set File Permissions
-        run: |
-          chmod +x ./src/train_iris.py
-          chmod +x ./src/train_wine.py
-
-      - name: Retrain Model
-        run: |
-          timestamp=$(cat timestamp.txt) # Use the timestamp in your training script
-          python ./src/train_iris.py --timestamp "$timestamp"
-          python ./src/train_wine.py --timestamp "$timestamp"
-
-      - name: Upload Iris Model
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: iris-model-${{ steps.timestamp.outputs.timestamp }}
-          path: src/model/iris_model.pkl
+          name: models-${{ steps.timestamp.outputs.timestamp }}
+          path: |
+            model/*.pkl
+            metrics/*.json
 
-      - name: Upload Wine Model
-        uses: actions/upload-artifact@v3
-        with:
-          name: wine-model-${{ steps.timestamp.outputs.timestamp }}
-          path: src/model/wine_model.pkl
-
-      - name: Commit and Push Models
+      - name: Commit and Push
         run: |
-          git config --global user.email "YOUR_EMAIL"
-          git config --global user.name "YOUR_NAME"
-          git add models/
+          git config --global user.email "adelkar.m@northeastern.edu"
+          git config --global user.name "mihiradelkar"
+          git add model/
           git add metrics/
           git diff --staged --quiet || git commit -m "Update models - ${{ steps.timestamp.outputs.timestamp }}"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    # - name: Evaluate Model and Log Metrics
-    #   run: |
-    #     timestamp=$(cat timestamp.txt) # Use the timestamp in your training script
-    #     python ./src/evaluate_model.py  --timestamp "$timestamp" # Assuming you have a script for model evaluation
-    #     metrics_filename="${timestamp}_metrics.json"
-    #     mv $metrics_filename $GITHUB_WORKSPACE/metrics/$metrics_filename
-    #   continue-on-error: false  # Continue even if evaluation fails
-
-    # - name: Store and Version the New Model
-    #   run: |
-    #     timestamp=$(cat timestamp.txt)
-    #     model_filename="model_${timestamp}_dt_model.joblib"
-    #     mv $model_filename $GITHUB_WORKSPACE/models/$model_filename
-
-    # - name: Commit and Push Changes
-    #   run: |
-    #     git config --global user.email "26876927+raminmohammadi@users.noreply.github.com"
-    #     git config --global user.name "raminmohammadi"
-    #     git add $GITHUB_WORKSPACE/metrics/$metrics_filename $GITHUB_WORKSPACE/models/$model_filename
-    #     git commit -m "Add metrics and updated model"
-    #     git push
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
