@@ -1,63 +1,73 @@
+# src/train_wine.py
 import joblib
 import os
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score
-from data_loader import load_wine_data, split_wine_data
+import sys
+import json
+from datetime import datetime
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from data_loader import load_wine_data, split_wine_data  # Import from data_loader
 
-def train_wine_model():
+def train_wine_model(timestamp=None):
     """
-    Train and save Wine classification model using joblib
+    Train and save Wine classification model with metrics
     """
+    if timestamp is None:
+        timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     
-    # Load data
+    # Load and split data using data_loader functions
     print("Loading Wine dataset...")
     X, y = load_wine_data()
-    
-    # Split data
     X_train, X_test, y_train, y_test = split_wine_data(X, y)
     
-    # Scale features (important for wine dataset)
-    print("Scaling features...")
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-    
     # Train model
-    print("Training Random Forest Classifier...")
-    model = RandomForestClassifier(
-        n_estimators=100,
-        random_state=42,
-        max_depth=10
-    )
-    model.fit(X_train_scaled, y_train)
+    print("Training Decision Tree Classifier for Wine...")
+    model = DecisionTreeClassifier(random_state=42, max_depth=3)
+    model.fit(X_train, y_train)
     
-    # Evaluate model
-    y_pred_train = model.predict(X_train_scaled)
-    y_pred_test = model.predict(X_test_scaled)
+    # Predictions
+    y_pred_train = model.predict(X_train)
+    y_pred_test = model.predict(X_test)
     
-    train_accuracy = accuracy_score(y_train, y_pred_train)
-    test_accuracy = accuracy_score(y_test, y_pred_test)
+    # Calculate metrics
+    metrics = {
+        "model": "wine",
+        "timestamp": timestamp,
+        "train_accuracy": accuracy_score(y_train, y_pred_train),
+        "test_accuracy": accuracy_score(y_test, y_pred_test),
+        "test_f1": f1_score(y_test, y_pred_test, average='macro'),
+        "test_precision": precision_score(y_test, y_pred_test, average='macro'),
+        "test_recall": recall_score(y_test, y_pred_test, average='macro')
+    }
     
-    print(f"\nModel Performance:")
-    print(f"Training accuracy: {train_accuracy:.3f}")
-    print(f"Test accuracy: {test_accuracy:.3f}")
+    print(f"\nWine Model Performance:")
+    print(f"Training accuracy: {metrics['train_accuracy']:.3f}")
+    print(f"Test accuracy: {metrics['test_accuracy']:.3f}")
+    print(f"F1 Score: {metrics['test_f1']:.3f}")
     
-    # Create model directory if it doesn't exist
-    model_dir = '../model'
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+    # Create directories
+    os.makedirs('../model', exist_ok=True)
+    os.makedirs('../metrics', exist_ok=True)
     
-    # Save model and scaler together using joblib
-    model_path = os.path.join(model_dir, 'wine_model.pkl')
-    joblib.dump({
-        'model': model,
-        'scaler': scaler
-    }, model_path)
+    # Save model with timestamp
+    model_path = f'../model/wine_model_{timestamp}.pkl'
+    joblib.dump(model, model_path)
+    print(f"✅ Wine model saved to {model_path}")
     
-    print(f"\n✅ Wine model saved to {model_path}")
+    # Also save as latest (for API)
+    latest_path = '../model/wine_model.pkl'
+    joblib.dump(model, latest_path)
+    print(f"✅ Latest wine model saved to {latest_path}")
     
-    return model, scaler
+    # Save metrics
+    metrics_path = f'../metrics/wine_{timestamp}_metrics.json'
+    with open(metrics_path, 'w') as f:
+        json.dump(metrics, f, indent=2)
+    print(f"✅ Metrics saved to {metrics_path}")
+    
+    return model, metrics
 
 if __name__ == "__main__":
-    train_wine_model()
+    # Check for timestamp argument
+    timestamp = sys.argv[2] if len(sys.argv) > 2 and '--timestamp' in sys.argv else None
+    train_wine_model(timestamp)
