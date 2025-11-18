@@ -53,7 +53,9 @@ jobs:
           git config --global user.name "mihiradelkar"
           git add model/
           git add metrics/
-          git diff --staged --quiet || git commit -m "Update models - ${{ steps.timestamp.outputs.timestamp }}"
-          git push
+          if ! git diff --staged --quiet; then
+            git commit -m "Update models - ${{ steps.timestamp.outputs.timestamp }}"
+            git push origin HEAD:main
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
