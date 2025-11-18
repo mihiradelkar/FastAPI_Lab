@@ -44,11 +44,17 @@ jobs:
         run: |
           git config --global user.email "adelkar.m@northeastern.edu"
           git config --global user.name "mihiradelkar"
+
+          # Fetch latest changes
+          git fetch origin main
+          git checkout main
+
+          # Add and commit
           git add model/
           git add metrics/
           if ! git diff --staged --quiet; then
             git commit -m "Update models - ${{ steps.timestamp.outputs.timestamp }}"
-            git push origin HEAD:main
+            git push
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
