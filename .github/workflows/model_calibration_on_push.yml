@@ -40,13 +40,15 @@ jobs:
           cd src
           python train_wine.py --timestamp ${{ steps.timestamp.outputs.timestamp }}
 
-      - name: Commit and Push Changes
+      - name: Commit and Push
         run: |
           git config --global user.email "adelkar.m@northeastern.edu"
           git config --global user.name "mihiradelkar"
           git add model/
           git add metrics/
-          git diff --staged --quiet || git commit -m "Retrain models on push - ${{ steps.timestamp.outputs.timestamp }}"
-          git push
+          if ! git diff --staged --quiet; then
+            git commit -m "Update models - ${{ steps.timestamp.outputs.timestamp }}"
+            git push origin HEAD:main
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
