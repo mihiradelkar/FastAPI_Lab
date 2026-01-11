@@ -1,0 +1,9 @@
+{
+  "model": "wine",
+  "timestamp": "20260111012650",
+  "train_accuracy": 0.9919354838709677,
+  "test_accuracy": 0.9629629629629629,
+  "test_f1": 0.9634937968271302,
+  "test_precision": 0.9710144927536232,
+  "test_recall": 0.9586466165413533
+}
