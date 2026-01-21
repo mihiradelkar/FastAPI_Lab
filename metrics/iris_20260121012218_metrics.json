@@ -1,0 +1,9 @@
+{
+  "model": "iris",
+  "timestamp": "20260121012218",
+  "train_accuracy": 1.0,
+  "test_accuracy": 0.9777777777777777,
+  "test_f1": 0.9731615673644658,
+  "test_precision": 0.9722222222222222,
+  "test_recall": 0.9761904761904763
+}
